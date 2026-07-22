@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank Statement Calculator</title>
+    <meta name="description" content="Calculate and filter transaction totals, counts, and averages from digital bank statement PDFs.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo-area">
+                <div class="logo-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-trending-up"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+                </div>
+                <div>
+                    <h1>Bank Statement Calculator</h1>
+                    <p class="subtitle">Extract, analyze, and filter digital PDF statements in seconds.</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Dashboard Layout -->
+        <main class="dashboard-grid">
+            
+            <!-- Upload Card -->
+            <section class="card upload-card" id="upload-section">
+                <div class="card-header">
+                    <h2>Upload Statement</h2>
+                    <span class="badge">Digital PDFs</span>
+                </div>
+                <div class="card-body">
+                    <div class="dropzone" id="dropzone">
+                        <input type="file" id="file-input" accept=".pdf" class="file-input">
+                        <div class="dropzone-content">
+                            <div class="upload-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="feather feather-upload-cloud"><polyline points="16 16 12 12 8 16"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path><polyline points="16 16 12 12 8 16"></polyline></svg>
+                            </div>
+                            <h3>Drag & Drop PDF here</h3>
+                            <p>or <span>browse your computer</span></p>
+                            <span class="file-types">Supports text-based digital PDF statements</span>
+                        </div>
+                    </div>
+                    
+                    <div id="upload-progress-container" class="progress-container hidden">
+                        <div class="progress-bar-wrapper">
+                            <div class="progress-bar" id="upload-progress"></div>
+                        </div>
+                        <div class="progress-status">
+                            <span id="progress-text">Uploading statement...</span>
+                            <span id="progress-percent">0%</span>
+                        </div>
+                    </div>
+
+                    <div id="error-alert" class="alert alert-error hidden">
+                        <span class="alert-icon">⚠️</span>
+                        <div class="alert-message" id="error-message">Error parsing PDF statement.</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Configuration & Filter Card (Initially Hidden) -->
+            <section class="card filter-card hidden" id="filter-section">
+                <div class="card-header">
+                    <h2>Parameters & Filters</h2>
+                </div>
+                <div class="card-body">
+                    <form id="filter-form">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="date-col-select">Date Column</label>
+                                <select id="date-col-select" required>
+                                    <option value="" disabled selected>Select Date Column</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="amount-col-select">Calculation Column</label>
+                                <select id="amount-col-select" required>
+                                    <option value="" disabled selected>Select Amount Column</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="from-date-input">From Date</label>
+                                <input type="date" id="from-date-input" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="to-date-input">To Date</label>
+                                <input type="date" id="to-date-input" required>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" id="calculate-btn">
+                            <span class="btn-text">Calculate Statistics</span>
+                            <div class="spinner hidden" id="calc-spinner"></div>
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Summary Results Dashboard (Initially Hidden) -->
+            <section class="results-dashboard hidden" id="results-section">
+                <div class="results-grid">
+                    <!-- Total Amount Card -->
+                    <div class="stat-card stat-primary">
+                        <div class="stat-meta">
+                            <span class="stat-title">Total Value</span>
+                            <span class="stat-icon">💰</span>
+                        </div>
+                        <h3 class="stat-val" id="stat-total">₹0.00</h3>
+                        <span class="stat-label">Sum of filtered column</span>
+                    </div>
+
+                    <!-- Additional Metrics Group -->
+                    <div class="stats-subgrid">
+                        <div class="stat-card">
+                            <div class="stat-meta">
+                                <span class="stat-title">Transactions</span>
+                                <span class="stat-icon">📊</span>
+                            </div>
+                            <h3 class="stat-val" id="stat-count">0</h3>
+                            <span class="stat-label">Matching items</span>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-meta">
+                                <span class="stat-title">Average</span>
+                                <span class="stat-icon">📈</span>
+                            </div>
+                            <h3 class="stat-val" id="stat-average">₹0.00</h3>
+                            <span class="stat-label">Per transaction</span>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-meta">
+                                <span class="stat-title">Minimum</span>
+                                <span class="stat-icon">📉</span>
+                            </div>
+                            <h3 class="stat-val" id="stat-min">₹0.00</h3>
+                            <span class="stat-label">Lowest amount</span>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-meta">
+                                <span class="stat-title">Maximum</span>
+                                <span class="stat-icon">🚀</span>
+                            </div>
+                            <h3 class="stat-val" id="stat-max">₹0.00</h3>
+                            <span class="stat-label">Highest amount</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Export / Download Card -->
+                <div class="card export-card">
+                    <div class="export-actions">
+                        <span>Download Filtered Data:</span>
+                        <div class="btn-group">
+                            <button id="download-csv-btn" class="btn btn-secondary">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                Export CSV
+                            </button>
+                            <button id="download-xlsx-btn" class="btn btn-secondary">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                Export Excel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Statement Table Preview Card (Initially Hidden) -->
+            <section class="card preview-card hidden" id="preview-section">
+                <div class="card-header">
+                    <h2>Data Preview <span class="subtext">(First 20 Rows)</span></h2>
+                    <span class="badge badge-secondary" id="preview-row-count">0 Rows Loaded</span>
+                </div>
+                <div class="card-body no-padding table-responsive">
+                    <table class="preview-table" id="preview-table">
+                        <thead>
+                            <tr id="preview-thead-row">
+                                <!-- Populated dynamically -->
+                            </tr>
+                        </thead>
+                        <tbody id="preview-tbody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </main>
+        
+        <footer class="app-footer">
+            <p>&copy; 2026 Bank Statement Calculator. Local, secure, client-side browser logic & standard calculations.</p>
+        </footer>
+    </div>
+    
+    <!-- Custom JavaScript -->
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
