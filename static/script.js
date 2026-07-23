@@ -24,6 +24,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const errorAlert = document.getElementById('error-alert');
     const errorMessage = document.getElementById('error-message');
     
+    // Password Elements
+    const passwordContainer = document.getElementById('password-container');
+    const passwordForm = document.getElementById('password-form');
+    const pdfPasswordInput = document.getElementById('pdf-password-input');
+    const togglePasswordBtn = document.getElementById('toggle-password-visibility');
+    const unlockBtn = document.getElementById('unlock-btn');
+    const unlockSpinner = document.getElementById('unlock-spinner');
+    
     const filterSection = document.getElementById('filter-section');
     const dateColSelect = document.getElementById('date-col-select');
     const amountColSelect = document.getElementById('amount-col-select');
@@ -79,17 +87,33 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    let currentFile = null;
+    const eyeIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-eye"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
+    const eyeOffIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-eye-off"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
+
     // Handle selected file
     function handleFileSelect(file) {
-        if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
-            showError('Please upload a valid PDF file.');
+        const isPdf = file.type === 'application/pdf' || file.name.endsWith('.pdf');
+        const isImage = file.type.startsWith('image/') || /\.(png|jpe?g)$/i.test(file.name);
+        
+        if (!isPdf && !isImage) {
+            showError('Please upload a valid PDF file or image (PNG, JPG, JPEG).');
             return;
         }
+        
+        currentFile = file;
+        
+        // Hide password section on new file select
+        passwordContainer.classList.add('hidden');
+        pdfPasswordInput.value = '';
+        pdfPasswordInput.type = 'password';
+        togglePasswordBtn.innerHTML = eyeIconSvg;
+        
         uploadFile(file);
     }
 
     // --- UPLOAD CONTROLLER ---
-    function uploadFile(file) {
+    function uploadFile(file, password = '') {
         // Reset previous states
         hideError();
         hideSections();
@@ -97,9 +121,16 @@ document.addEventListener('DOMContentLoaded', () => {
         progressBar.style.width = '0%';
         progressPercent.textContent = '0%';
         progressText.textContent = 'Uploading statement...';
+        
+        // Disable unlock buttons if form was submitted
+        unlockBtn.disabled = true;
+        unlockSpinner.classList.remove('hidden');
 
         const formData = new FormData();
         formData.append('file', file);
+        if (password) {
+            formData.append('password', password);
+        }
 
         const xhr = new XMLHttpRequest();
         xhr.open('POST', '/upload', true);
@@ -111,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 progressBar.style.width = percent + '%';
                 progressPercent.textContent = percent + '%';
                 if (percent === 100) {
-                    progressText.textContent = 'Parsing statement tables (this may take a few seconds)...';
+                    progressText.textContent = 'Parsing statement data (this may take a few seconds)...';
                 }
             }
         });
@@ -119,17 +150,35 @@ document.addEventListener('DOMContentLoaded', () => {
         // Load finish
         xhr.onload = function() {
             progressContainer.classList.add('hidden');
+            unlockBtn.disabled = false;
+            unlockSpinner.classList.add('hidden');
+            
             if (xhr.status === 200) {
                 try {
                     const response = JSON.parse(xhr.responseText);
+                    passwordContainer.classList.add('hidden'); // Success, hide password box
                     onUploadSuccess(response);
                 } catch (e) {
                     showError('Unexpected response from server.');
                 }
+            } else if (xhr.status === 401) {
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    if (response.password_required) {
+                        showError(response.error || 'Password required to unlock PDF.');
+                        passwordContainer.classList.remove('hidden');
+                        pdfPasswordInput.focus();
+                        pdfPasswordInput.select();
+                    } else {
+                        showError(response.error || 'Unauthorized action.');
+                    }
+                } catch (e) {
+                    showError('Failed to unlock and parse statement.');
+                }
             } else {
                 try {
                     const response = JSON.parse(xhr.responseText);
-                    showError(response.error || 'Failed to parse the bank statement PDF.');
+                    showError(response.error || 'Failed to parse the bank statement.');
                 } catch (e) {
                     showError('Failed to upload and parse statement.');
                 }
@@ -138,6 +187,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         xhr.onerror = function() {
             progressContainer.classList.add('hidden');
+            unlockBtn.disabled = false;
+            unlockSpinner.classList.add('hidden');
             showError('Network error occurred during upload.');
         };
 
@@ -404,6 +455,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     downloadCsvBtn.addEventListener('click', () => triggerDownload('csv'));
     downloadXlsxBtn.addEventListener('click', () => triggerDownload('excel'));
+
+    // --- PASSWORD CONTROLLER LISTENERS ---
+    passwordForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const passwordValue = pdfPasswordInput.value;
+        if (!passwordValue) {
+            showError('Please enter a password.');
+            return;
+        }
+        if (currentFile) {
+            uploadFile(currentFile, passwordValue);
+        }
+    });
+
+    togglePasswordBtn.addEventListener('click', () => {
+        if (pdfPasswordInput.type === 'password') {
+            pdfPasswordInput.type = 'text';
+            togglePasswordBtn.innerHTML = eyeOffIconSvg;
+            togglePasswordBtn.title = 'Hide password';
+        } else {
+            pdfPasswordInput.type = 'password';
+            togglePasswordBtn.innerHTML = eyeIconSvg;
+            togglePasswordBtn.title = 'Show password';
+        }
+    });
 
     // --- HELPERS ---
     function showError(msg) {

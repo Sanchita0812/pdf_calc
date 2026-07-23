@@ -551,6 +551,63 @@ body {
     font-size: 0.85rem;
 }
 
+/* Password Container Styling */
+.password-container {
+    margin-top: 1.5rem;
+    padding: 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background-color: var(--background);
+    animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.password-input-wrapper {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.password-field-container {
+    position: relative;
+    flex-grow: 1;
+}
+
+.password-field-container input {
+    width: 100%;
+    padding-right: 2.75rem !important;
+    margin-bottom: 0 !important;
+}
+
+.toggle-password-btn {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    padding: 0.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.toggle-password-btn:hover {
+    color: var(--text-main);
+}
+
+.password-input-wrapper .btn {
+    width: auto;
+    white-space: nowrap;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 /* Helper Utilities */
 .hidden {
     display: none !important;

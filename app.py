@@ -4,7 +4,8 @@ import io
 import datetime
 from flask import Flask, render_template, request, jsonify, send_file
 import pandas as pd
-from parser import parse_pdf
+from parser import parse_pdf, parse_image
+from pdfminer.pdfdocument import PDFPasswordIncorrect
 from utils import parse_date, clean_amount, format_indian_currency
 
 app = Flask(__name__)
@@ -27,23 +28,40 @@ def upload_file():
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
         
-    if not file.filename.lower().endswith('.pdf'):
-        return jsonify({'error': 'Only PDF files are supported'}), 400
+    filename_lower = file.filename.lower()
+    is_pdf = filename_lower.endswith('.pdf')
+    is_image = filename_lower.endswith(('.png', '.jpg', '.jpeg'))
+    
+    if not (is_pdf or is_image):
+        return jsonify({'error': 'Only PDF and image files (PNG, JPG, JPEG) are supported'}), 400
         
+    password = request.form.get('password')
+    if not password:
+        password = None
+
+    session_id = str(uuid.uuid4())
+    file_ext = os.path.splitext(filename_lower)[1]
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{session_id}{file_ext}")
+
     try:
-        session_id = str(uuid.uuid4())
-        pdf_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{session_id}.pdf")
-        file.save(pdf_path)
+        file.save(file_path)
         
-        # Parse PDF
-        df, detected = parse_pdf(pdf_path)
-        
-        # Clean up PDF file to save space
-        if os.path.exists(pdf_path):
-            os.remove(pdf_path)
+        # Parse PDF or Image
+        if is_image:
+            df, detected = parse_image(file_path)
+        else:
+            df, detected = parse_pdf(file_path, password=password)
+            
+        # Clean up uploaded file to save space
+        if os.path.exists(file_path):
+            os.remove(file_path)
             
         if df.empty:
-            return jsonify({'error': 'No tabular data could be extracted from this PDF. Please ensure it is a digital (text-based) bank statement.'}), 400
+            if is_image:
+                err_msg = 'No tabular data could be extracted from this image. Please ensure the image is clear and contains a transaction statement table.'
+            else:
+                err_msg = 'No tabular data could be extracted from this PDF. Please ensure it is a digital (text-based) bank statement.'
+            return jsonify({'error': err_msg}), 400
             
         # Save DataFrame as CSV for session persistence
         csv_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{session_id}.csv")
@@ -71,10 +89,24 @@ def upload_file():
             }
         })
         
+    except PDFPasswordIncorrect:
+        # Clean up file on password error
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        msg = 'Incorrect password. Please try again.' if password else 'This PDF is password-protected. Please enter the password.'
+        return jsonify({
+            'error': msg,
+            'password_required': True
+        }), 401
+        
     except Exception as e:
+        # Clean up file on any other exception
+        if os.path.exists(file_path):
+            os.remove(file_path)
         import traceback
         traceback.print_exc()
-        return jsonify({'error': f'Failed to process PDF: {str(e)}'}), 500
+        file_type_str = "image" if is_image else "PDF"
+        return jsonify({'error': f'Failed to process {file_type_str}: {str(e)}'}), 500
 
 @app.route('/calculate', methods=['POST'])
 def calculate():

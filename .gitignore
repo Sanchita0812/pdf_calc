@@ -1,0 +1,25 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.venv/
+venv/
+ENV/
+env/
+.env
+
+# Virtualenv / Poetry / pipenv caches
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Flask uploads (ignore uploaded pdf/csv files, but keep test_statement.pdf)
+uploads/*
+!uploads/test_statement.pdf
