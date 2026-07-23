@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bank Statement Calculator</title>
-    <meta name="description" content="Calculate and filter transaction totals, counts, and averages from digital bank statement PDFs.">
+    <meta name="description"
+        content="Calculate and filter transaction totals, counts, and averages from digital bank statement PDFs.">
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,16 +14,22 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+
 <body>
     <div class="app-container">
         <!-- Header -->
         <header class="app-header">
             <div class="logo-area">
                 <div class="logo-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-trending-up"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="feather feather-trending-up">
+                        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                        <polyline points="17 6 23 6 23 12"></polyline>
+                    </svg>
                 </div>
                 <div>
-                    <h1>Bank Statement Calculator</h1>
+                    <h1>Bank Statement Insights</h1>
                     <p class="subtitle">Extract, analyze, and filter digital PDF statements in seconds.</p>
                 </div>
             </div>
@@ -29,7 +37,7 @@
 
         <!-- Main Dashboard Layout -->
         <main class="dashboard-grid">
-            
+
             <!-- Upload Card -->
             <section class="card upload-card" id="upload-section">
                 <div class="card-header">
@@ -41,14 +49,21 @@
                         <input type="file" id="file-input" accept=".pdf,image/*" class="file-input">
                         <div class="dropzone-content">
                             <div class="upload-icon">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="feather feather-upload-cloud"><polyline points="16 16 12 12 8 16"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path><polyline points="16 16 12 12 8 16"></polyline></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                                    stroke-linejoin="round" class="feather feather-upload-cloud">
+                                    <polyline points="16 16 12 12 8 16"></polyline>
+                                    <line x1="12" y1="12" x2="12" y2="21"></line>
+                                    <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path>
+                                    <polyline points="16 16 12 12 8 16"></polyline>
+                                </svg>
                             </div>
                             <h3>Drag & Drop PDF or Image here</h3>
                             <p>or <span>browse your computer</span></p>
                             <span class="file-types">Supports digital PDFs and statement images (PNG, JPG, JPEG)</span>
                         </div>
                     </div>
-                    
+
                     <div id="upload-progress-container" class="progress-container hidden">
                         <div class="progress-bar-wrapper">
                             <div class="progress-bar" id="upload-progress"></div>
@@ -65,9 +80,17 @@
                                 <label for="pdf-password-input">Password Protected PDF</label>
                                 <div class="password-input-wrapper">
                                     <div class="password-field-container">
-                                        <input type="password" id="pdf-password-input" placeholder="Enter PDF password" required autocomplete="current-password">
-                                        <button type="button" id="toggle-password-visibility" class="toggle-password-btn" title="Show password">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-eye"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                        <input type="password" id="pdf-password-input" placeholder="Enter PDF password"
+                                            required autocomplete="current-password">
+                                        <button type="button" id="toggle-password-visibility"
+                                            class="toggle-password-btn" title="Show password">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+                                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                                stroke-linecap="round" stroke-linejoin="round"
+                                                class="feather feather-eye">
+                                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                                <circle cx="12" cy="12" r="3"></circle>
+                                            </svg>
                                         </button>
                                     </div>
                                     <button type="submit" class="btn btn-primary" id="unlock-btn">
@@ -206,11 +229,23 @@
                         <span>Download Filtered Data:</span>
                         <div class="btn-group">
                             <button id="download-csv-btn" class="btn btn-secondary">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" style="margin-right: 8px;">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="7 10 12 15 17 10"></polyline>
+                                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                                </svg>
                                 Export CSV
                             </button>
                             <button id="download-xlsx-btn" class="btn btn-secondary">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" style="margin-right: 8px;">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="7 10 12 15 17 10"></polyline>
+                                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                                </svg>
                                 Export Excel
                             </button>
                         </div>
@@ -239,13 +274,15 @@
             </section>
 
         </main>
-        
+
         <footer class="app-footer">
-            <p>&copy; 2026 Bank Statement Calculator. Local, secure, client-side browser logic & standard calculations.</p>
+            <p>&copy; 2026 Bank Statement Calculator. Local, secure, client-side browser logic & standard calculations.
+            </p>
         </footer>
     </div>
-    
+
     <!-- Custom JavaScript -->
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
+
 </html>
