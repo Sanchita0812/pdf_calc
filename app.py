@@ -182,7 +182,14 @@ def calculate():
         amounts = filtered_df[amount_col].apply(clean_amount)
         
         # Calculate stats
-        total = amounts.sum()
+        is_balance_col = 'balance' in amount_col.lower() or 'bal' in amount_col.lower()
+        if is_balance_col:
+            # For balance column, display the last entry's balance value
+            last_raw_val = filtered_df.iloc[-1][amount_col]
+            total = clean_amount(last_raw_val)
+        else:
+            total = amounts.sum()
+            
         non_zero_amounts = amounts[amounts != 0.0]
         count = len(non_zero_amounts)
         average = non_zero_amounts.mean() if count > 0 else 0.0

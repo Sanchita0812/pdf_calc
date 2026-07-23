@@ -429,6 +429,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 hideError();
                 // Render stats
                 statTotal.textContent = data.total;
+                
+                // Dynamically adjust labels for balance calculations
+                const selectedAmtCol = amountColSelect.value.toLowerCase();
+                const isBal = selectedAmtCol.includes('balance') || selectedAmtCol.includes('bal');
+                
+                const statCard = statTotal.closest('.stat-card');
+                const statTitle = statCard.querySelector('.stat-title');
+                const statLabel = statCard.querySelector('.stat-label');
+                
+                if (isBal) {
+                    statTitle.textContent = 'Ending Balance';
+                    statLabel.textContent = 'Value of last entry in range';
+                } else {
+                    statTitle.textContent = 'Total Value';
+                    statLabel.textContent = 'Sum of filtered column';
+                }
+                
                 statCount.textContent = data.count;
                 statAverage.textContent = data.average;
                 statMin.textContent = data.min;
