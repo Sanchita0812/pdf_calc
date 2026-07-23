@@ -103,8 +103,10 @@ def parse_pdf(pdf_path, password=None):
     """
     # Keywords to detect the header row in table data
     keywords = {'date', 'narration', 'description', 'particulars', 'chq', 'cheque', 'ref', 'debit', 'withdrawal', 'credit', 'deposit', 'balance', 'amount'}
+    # 1. Check password and count total pages
     try:
-        pdf_obj = pdfplumber.open(pdf_path, password=password)
+        with pdfplumber.open(pdf_path, password=password) as pdf:
+            num_pages = len(pdf.pages)
     except (PDFPasswordIncorrect, PdfminerException) as e:
         is_password_err = False
         if isinstance(e, PDFPasswordIncorrect):
@@ -121,8 +123,13 @@ def parse_pdf(pdf_path, password=None):
     import gc
     all_extracted_tables = []
     
-    with pdf_obj as pdf:
-        for page_num, page in enumerate(pdf.pages):
+    # 2. Process page-by-page, opening/closing the file on each page to release memory
+    for page_num in range(num_pages):
+        with pdfplumber.open(pdf_path, password=password) as pdf:
+            if page_num >= len(pdf.pages):
+                continue
+            page = pdf.pages[page_num]
+            
             # Extract tables using default settings
             tables = page.extract_tables()
             if not tables:
@@ -153,12 +160,12 @@ def parse_pdf(pdf_path, password=None):
                         'rows': cleaned_table
                     })
             
-            # Flush page cache to release memory occupied by layout objects
+            # Flush page cache before closing
             page.flush_cache()
             
-            # Periodically force garbage collection to reclaim memory on Render's 512MB RAM tier
-            if page_num % 5 == 0:
-                gc.collect()
+        # Reclaim memory periodically
+        if page_num % 5 == 0:
+            gc.collect()
                     
     if not all_extracted_tables:
         return pd.DataFrame(), {}
