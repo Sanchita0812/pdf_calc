@@ -118,6 +118,7 @@ def parse_pdf(pdf_path, password=None):
             raise PDFPasswordIncorrect("Password required or incorrect")
         raise
         
+    import gc
     all_extracted_tables = []
     
     with pdf_obj as pdf:
@@ -151,6 +152,13 @@ def parse_pdf(pdf_path, password=None):
                         'width': width,
                         'rows': cleaned_table
                     })
+            
+            # Flush page cache to release memory occupied by layout objects
+            page.flush_cache()
+            
+            # Periodically force garbage collection to reclaim memory on Render's 512MB RAM tier
+            if page_num % 5 == 0:
+                gc.collect()
                     
     if not all_extracted_tables:
         return pd.DataFrame(), {}
