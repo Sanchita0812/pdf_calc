@@ -21,4 +21,4 @@ COPY . .
 EXPOSE 8080
 
 # Start command
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-8080} wsgi:app"]
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-8080} --timeout 120 wsgi:app"]
