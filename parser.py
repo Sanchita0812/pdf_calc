@@ -103,9 +103,20 @@ def parse_pdf(pdf_path, password=None):
     """
     # Keywords to detect the header row in table data
     keywords = {'date', 'narration', 'description', 'particulars', 'chq', 'cheque', 'ref', 'debit', 'withdrawal', 'credit', 'deposit', 'balance', 'amount'}
+    import io
+    import gc
+    
+    # Read the file into memory once to avoid multiple disk reads in the loop
+    try:
+        with open(pdf_path, 'rb') as f:
+            pdf_bytes = f.read()
+    except Exception:
+        pdf_bytes = None
+
     # 1. Check password and count total pages
     try:
-        with pdfplumber.open(pdf_path, password=password) as pdf:
+        pdf_file = io.BytesIO(pdf_bytes) if pdf_bytes is not None else pdf_path
+        with pdfplumber.open(pdf_file, password=password) as pdf:
             num_pages = len(pdf.pages)
     except (PDFPasswordIncorrect, PdfminerException) as e:
         is_password_err = False
@@ -120,12 +131,12 @@ def parse_pdf(pdf_path, password=None):
             raise PDFPasswordIncorrect("Password required or incorrect")
         raise
         
-    import gc
     all_extracted_tables = []
     
     # 2. Process page-by-page, opening/closing the file on each page to release memory
     for page_num in range(num_pages):
-        with pdfplumber.open(pdf_path, password=password) as pdf:
+        pdf_file = io.BytesIO(pdf_bytes) if pdf_bytes is not None else pdf_path
+        with pdfplumber.open(pdf_file, password=password) as pdf:
             if page_num >= len(pdf.pages):
                 continue
             page = pdf.pages[page_num]
