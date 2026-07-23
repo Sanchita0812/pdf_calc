@@ -101,10 +101,6 @@ def parse_pdf(pdf_path, password=None):
         df: pandas DataFrame containing the extracted data
         detected: dict containing detected date and numeric columns
     """
-    all_rows = []
-    header_cols = None
-    header_idx = -1
-    
     # Keywords to detect the header row in table data
     keywords = {'date', 'narration', 'description', 'particulars', 'chq', 'cheque', 'ref', 'debit', 'withdrawal', 'credit', 'deposit', 'balance', 'amount'}
     try:
@@ -122,6 +118,8 @@ def parse_pdf(pdf_path, password=None):
             raise PDFPasswordIncorrect("Password required or incorrect")
         raise
         
+    all_extracted_tables = []
+    
     with pdf_obj as pdf:
         for page_num, page in enumerate(pdf.pages):
             # Extract tables using default settings
@@ -145,71 +143,145 @@ def parse_pdf(pdf_path, password=None):
                     if any(c != "" for c in cleaned_row):
                         cleaned_table.append(cleaned_row)
                         
-                if not cleaned_table:
-                    continue
+                if cleaned_table:
+                    # Determine row width (number of columns)
+                    width = len(cleaned_table[0])
+                    all_extracted_tables.append({
+                        'page_num': page_num,
+                        'width': width,
+                        'rows': cleaned_table
+                    })
                     
-                # If we haven't found a header yet, look for it in this table
-                if header_cols is None:
-                    for idx, row in enumerate(cleaned_table):
-                        lower_row = [c.lower() for c in row]
-                        # Count matches with header keywords
-                        matches = sum(1 for cell in lower_row if any(kw in cell for kw in keywords))
-                        if matches >= 2:
-                            header_cols = row
-                            header_idx = idx
-                            break
-                    
-                    if header_cols is not None:
-                        # Slice the table to start after the header
-                        data_rows = cleaned_table[header_idx + 1:]
-                    else:
-                        # Default to first row of first table if keyword search failed
-                        header_cols = cleaned_table[0]
-                        data_rows = cleaned_table[1:]
-                        
-                    # Clean header names: handle empty headers and duplicate headers
-                    header_cols = [c.strip() if c.strip() else f"Column_{i}" for i, c in enumerate(header_cols)]
-                    
-                    seen = {}
-                    new_headers = []
-                    for c in header_cols:
-                        if c in seen:
-                            seen[c] += 1
-                            new_headers.append(f"{c}_{seen[c]}")
-                        else:
-                            seen[c] = 0
-                            new_headers.append(c)
-                    header_cols = new_headers
-                else:
-                    # We already have headers. Extract all data rows, skipping repeating headers.
-                    data_rows = []
-                    for row in cleaned_table:
-                        is_header_repeat = False
-                        if len(row) == len(header_cols):
-                            # If row contains names identical to headers, skip it
-                            match_count = sum(1 for c, h in zip(row, header_cols) if c.lower() == h.lower())
-                            if match_count >= max(2, len(header_cols) // 2):
-                                is_header_repeat = True
-                        if not is_header_repeat:
-                            data_rows.append(row)
-                            
-                # Map data rows to the established header columns
-                for row in data_rows:
-                    row_dict = {}
-                    for h, val in itertools.zip_longest(header_cols, row, fillvalue=""):
-                        if h:
-                            row_dict[h] = val
-                    all_rows.append(row_dict)
-                    
-    if not all_rows:
+    if not all_extracted_tables:
         return pd.DataFrame(), {}
+        
+    # Group tables by column width
+    tables_by_width = {}
+    for entry in all_extracted_tables:
+        w = entry['width']
+        if w not in tables_by_width:
+            tables_by_width[w] = []
+        tables_by_width[w].append(entry)
+        
+    # For each width, process headers and count valid dates
+    width_stats = {}
+    for w, entries in tables_by_width.items():
+        header_cols = None
+        header_idx = -1
+        header_entry_idx = -1
+        
+        # Search for a row matching keywords in all tables of this width
+        for entry_idx, entry in enumerate(entries):
+            for r_idx, row in enumerate(entry['rows']):
+                lower_row = [c.lower() for c in row]
+                matches = sum(1 for cell in lower_row if any(kw in cell for kw in keywords))
+                if matches >= 2:
+                    header_cols = row
+                    header_idx = r_idx
+                    header_entry_idx = entry_idx
+                    break
+            if header_cols is not None:
+                break
+                
+        # If no header was found, use default column names and treat all rows as data
+        if header_cols is None:
+            header_cols = [f"Column_{i}" for i in range(w)]
+            data_rows = []
+            for entry in entries:
+                data_rows.extend(entry['rows'])
+        else:
+            # Clean header names: handle empty and duplicate headers
+            header_cols = [c.strip() if c.strip() else f"Column_{i}" for i, c in enumerate(header_cols)]
+            seen = {}
+            new_headers = []
+            for c in header_cols:
+                if c in seen:
+                    seen[c] += 1
+                    new_headers.append(f"{c}_{seen[c]}")
+                else:
+                    seen[c] = 0
+                    new_headers.append(c)
+            header_cols = new_headers
+            
+            # Extract data rows, skipping repeating header rows
+            data_rows = []
+            for entry_idx, entry in enumerate(entries):
+                if entry_idx == header_entry_idx:
+                    rows_to_process = entry['rows'][header_idx + 1:]
+                else:
+                    rows_to_process = entry['rows']
+                    
+                for row in rows_to_process:
+                    is_header_repeat = False
+                    if len(row) == w:
+                        match_count = sum(1 for c, h in zip(row, header_cols) if c.lower() == h.lower())
+                        if match_count >= max(2, w // 2):
+                            is_header_repeat = True
+                    if not is_header_repeat:
+                        data_rows.append(row)
+                        
+        # Identify the best date column and count total rows with valid dates
+        best_date_col_idx = -1
+        max_date_count = 0
+        
+        if data_rows:
+            for col_idx in range(w):
+                date_count = 0
+                for row in data_rows:
+                    if col_idx < len(row):
+                        val = row[col_idx]
+                        if parse_date(val) is not None:
+                            date_count += 1
+                if date_count > max_date_count:
+                    max_date_count = date_count
+                    best_date_col_idx = col_idx
+                    
+        width_stats[w] = {
+            'header_cols': header_cols,
+            'data_rows': data_rows,
+            'best_date_col_idx': best_date_col_idx,
+            'date_count': max_date_count,
+            'total_rows': len(data_rows)
+        }
+        
+    # Select winning table width based on maximum date count
+    winning_width = None
+    max_dates = -1
+    for w, stats in width_stats.items():
+        if stats['date_count'] > max_dates:
+            max_dates = stats['date_count']
+            winning_width = w
+            
+    if max_dates <= 0:
+        # Fallback to the width with the highest total rows
+        max_rows = -1
+        for w, stats in width_stats.items():
+            if stats['total_rows'] > max_rows:
+                max_rows = stats['total_rows']
+                winning_width = w
+                
+    if winning_width is None:
+        return pd.DataFrame(), {}
+        
+    winning_stats = width_stats[winning_width]
+    header_cols = winning_stats['header_cols']
+    data_rows = winning_stats['data_rows']
+    
+    # Map row values to headers
+    all_rows = []
+    for row in data_rows:
+        row_dict = {}
+        for h, val in itertools.zip_longest(header_cols, row, fillvalue=""):
+            if h:
+                row_dict[h] = val
+        all_rows.append(row_dict)
         
     df = pd.DataFrame(all_rows)
     
-    # Post-processing: Remove rows that look like empty spacer rows (mostly blank)
-    # E.g., if more than 80% of cells are empty
-    df = df[df.apply(lambda r: sum(str(x).strip() != "" for x in r) / len(r) > 0.2, axis=1)]
-    
+    # Remove mostly empty spacer rows
+    if not df.empty:
+        df = df[df.apply(lambda r: sum(str(x).strip() != "" for x in r) / len(r) > 0.2, axis=1)]
+        
     # Auto-detect columns
     detected = detect_columns(df)
     
