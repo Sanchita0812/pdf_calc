@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const fromDateInput = document.getElementById('from-date-input');
     const toDateInput = document.getElementById('to-date-input');
     const descColSelect = document.getElementById('desc-col-select');
-    const descFilterType = document.getElementById('desc-filter-type');
+    const descFilterTypeSelect = document.getElementById('desc-filter-type');
     const descFilterInput = document.getElementById('desc-filter-input');
     const filterForm = document.getElementById('filter-form');
     const calculateBtn = document.getElementById('calculate-btn');
@@ -390,7 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const toDate = toDateInput.value;
         const descCol = descColSelect.value;
         const descFilter = descFilterInput.value;
-        const descFilterType = descFilterType.value;
+        const descFilterType = descFilterTypeSelect.value;
 
         if (!dateCol || !amountCol || !fromDate || !toDate) {
             showError('Please configure all filters correctly.');
@@ -457,7 +457,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const toDate = toDateInput.value;
         const descCol = descColSelect.value;
         const descFilter = descFilterInput.value;
-        const descFilterType = descFilterType.value;
+        const descFilterType = descFilterTypeSelect.value;
 
         if (!dateCol || !amountCol || !fromDate || !toDate) {
             showError('Please check parameters before exporting.');
