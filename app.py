@@ -2,11 +2,16 @@ import os
 import uuid
 import io
 import datetime
+import mimetypes
 from flask import Flask, render_template, request, jsonify, send_file
 import pandas as pd
 from parser import parse_pdf, parse_image
 from pdfminer.pdfdocument import PDFPasswordIncorrect
 from utils import parse_date, clean_amount, format_indian_currency
+
+# Ensure correct MIME type detection for static assets on cloud hosting
+mimetypes.add_type('text/css', '.css')
+mimetypes.add_type('application/javascript', '.js')
 
 app = Flask(__name__)
 
