@@ -11,11 +11,12 @@ from utils import parse_date, clean_amount
 
 def detect_columns(df):
     """
-    Heuristically detects which column represents dates and which represent numeric/amount columns.
+    Heuristically detects which column represents dates, numeric/amount columns, and description/narration.
     """
     detected = {
         'date_col': None,
-        'numeric_cols': []
+        'numeric_cols': [],
+        'desc_col': None
     }
     
     if df.empty:
@@ -91,6 +92,38 @@ def detect_columns(df):
         # If header matches or values look numeric (e.g. > 50% are numeric)
         if is_num_by_header or score > 0.5:
             detected['numeric_cols'].append(col)
+            
+    # 3. Detect Description/Narration Column
+    desc_keywords = {'description', 'narration', 'particulars', 'remarks', 'details', 'info', 'transaction'}
+    best_desc_col = None
+    best_desc_score = 0
+    
+    for col in columns:
+        if col == best_date_col or col in detected['numeric_cols']:
+            continue
+            
+        col_lower = col.lower()
+        score = 0.0
+        
+        # Boost score if header contains description keywords
+        if any(dk in col_lower for dk in desc_keywords):
+            score += 0.8
+            
+        sample_vals = df[col].dropna().astype(str).tolist()
+        sample_vals = [v.strip() for v in sample_vals if v.strip() != ""][:20]
+        if sample_vals:
+            # Boost score if values are relatively long text strings (typical for narration/description)
+            avg_len = sum(len(v) for v in sample_vals) / len(sample_vals)
+            if avg_len > 10:
+                score += 0.15
+            elif avg_len > 5:
+                score += 0.05
+                
+        if score > 0.1 and score > best_desc_score:
+            best_desc_score = score
+            best_desc_col = col
+            
+    detected['desc_col'] = best_desc_col
             
     return detected
 

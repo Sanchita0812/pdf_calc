@@ -123,6 +123,9 @@ def calculate():
     amount_col = data.get('amount_col')
     from_date_str = data.get('from_date')
     to_date_str = data.get('to_date')
+    desc_col = data.get('desc_col')
+    desc_filter = data.get('desc_filter')
+    desc_filter_type = data.get('desc_filter_type', 'contains')
     
     if not all([session_id, date_col, amount_col, from_date_str, to_date_str]):
         return jsonify({'error': 'Missing required fields'}), 400
@@ -155,6 +158,17 @@ def calculate():
         date_mask = (filtered_dates >= from_date) & (filtered_dates <= to_date)
         filtered_df = filtered_df[date_mask]
         
+        # Apply description filter if configured
+        if desc_col and desc_filter and desc_col in filtered_df.columns:
+            desc_filter_str = str(desc_filter).strip()
+            if desc_filter_str:
+                desc_series = filtered_df[desc_col].astype(str)
+                if desc_filter_type == 'not_contains':
+                    desc_mask = ~desc_series.str.contains(desc_filter_str, case=False, na=False)
+                else:
+                    desc_mask = desc_series.str.contains(desc_filter_str, case=False, na=False)
+                filtered_df = filtered_df[desc_mask]
+                
         if filtered_df.empty:
             return jsonify({
                 'total': format_indian_currency(0.0),
@@ -198,6 +212,9 @@ def download(file_type):
     amount_col = request.args.get('amount_col')
     from_date_str = request.args.get('from_date')
     to_date_str = request.args.get('to_date')
+    desc_col = request.args.get('desc_col')
+    desc_filter = request.args.get('desc_filter')
+    desc_filter_type = request.args.get('desc_filter_type', 'contains')
     
     if not all([session_id, date_col, amount_col, from_date_str, to_date_str]):
         return "Missing required parameters", 400
@@ -220,6 +237,17 @@ def download(file_type):
         
         date_mask = (filtered_dates >= from_date) & (filtered_dates <= to_date)
         filtered_df = filtered_df[date_mask]
+        
+        # Apply description filter if configured
+        if desc_col and desc_filter and desc_col in filtered_df.columns:
+            desc_filter_str = str(desc_filter).strip()
+            if desc_filter_str:
+                desc_series = filtered_df[desc_col].astype(str)
+                if desc_filter_type == 'not_contains':
+                    desc_mask = ~desc_series.str.contains(desc_filter_str, case=False, na=False)
+                else:
+                    desc_mask = desc_series.str.contains(desc_filter_str, case=False, na=False)
+                filtered_df = filtered_df[desc_mask]
         
         buffer = io.BytesIO()
         

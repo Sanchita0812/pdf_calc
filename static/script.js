@@ -37,6 +37,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const amountColSelect = document.getElementById('amount-col-select');
     const fromDateInput = document.getElementById('from-date-input');
     const toDateInput = document.getElementById('to-date-input');
+    const descColSelect = document.getElementById('desc-col-select');
+    const descFilterType = document.getElementById('desc-filter-type');
+    const descFilterInput = document.getElementById('desc-filter-input');
     const filterForm = document.getElementById('filter-form');
     const calculateBtn = document.getElementById('calculate-btn');
     const calcSpinner = document.getElementById('calc-spinner');
@@ -240,10 +243,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Clear options
         dateColSelect.innerHTML = '<option value="" disabled>Select Date Column</option>';
         amountColSelect.innerHTML = '<option value="" disabled>Select Amount Column</option>';
+        descColSelect.innerHTML = '<option value="">No Description Filter</option>';
 
         const columns = sessionState.columns;
         const detectedDate = sessionState.detected.date_col;
         const detectedNumeric = sessionState.detected.numeric_cols;
+        const detectedDesc = sessionState.detected.desc_col;
 
         columns.forEach(col => {
             // Add to date dropdown
@@ -264,6 +269,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 amtOpt.selected = true;
             }
             amountColSelect.appendChild(amtOpt);
+
+            // Add to description dropdown
+            const descOpt = document.createElement('option');
+            descOpt.value = col;
+            descOpt.textContent = col;
+            if (col === detectedDesc) {
+                descOpt.selected = true;
+            }
+            descColSelect.appendChild(descOpt);
         });
 
         // If no auto-selected date option matches, select first
@@ -374,6 +388,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const amountCol = amountColSelect.value;
         const fromDate = fromDateInput.value;
         const toDate = toDateInput.value;
+        const descCol = descColSelect.value;
+        const descFilter = descFilterInput.value;
+        const descFilterType = descFilterType.value;
 
         if (!dateCol || !amountCol || !fromDate || !toDate) {
             showError('Please configure all filters correctly.');
@@ -394,7 +411,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 date_col: dateCol,
                 amount_col: amountCol,
                 from_date: fromDate,
-                to_date: toDate
+                to_date: toDate,
+                desc_col: descCol,
+                desc_filter: descFilter,
+                desc_filter_type: descFilterType
             })
         })
         .then(res => res.json())
@@ -435,6 +455,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const amountCol = amountColSelect.value;
         const fromDate = fromDateInput.value;
         const toDate = toDateInput.value;
+        const descCol = descColSelect.value;
+        const descFilter = descFilterInput.value;
+        const descFilterType = descFilterType.value;
 
         if (!dateCol || !amountCol || !fromDate || !toDate) {
             showError('Please check parameters before exporting.');
@@ -447,7 +470,10 @@ document.addEventListener('DOMContentLoaded', () => {
             date_col: dateCol,
             amount_col: amountCol,
             from_date: fromDate,
-            to_date: toDate
+            to_date: toDate,
+            desc_col: descCol,
+            desc_filter: descFilter,
+            desc_filter_type: descFilterType
         });
 
         window.location.href = `/download/${fileType}?${params.toString()}`;
